@@ -8,14 +8,16 @@ Proof of concept of using boxes to store "pages" of logic. The idea is that by u
 ## Definitions
 
 **Page** - An approval program with logic that operates on shared state
-**Orchestrator** - The application that stores the pages in boxes
-**Logic App** - The application that contains the shared state. This is the application that gets updated to the various pages
+**Orchestrator-Based**: A pattern that uses two apps. The **orchestrator**, which is a single app that issues updates to the **logic app** so it can call different pages.
+**Self-Updating**: A pattern with a single app that updates itself before method calls
 
 ## Method Calling
 
 There are three ways to do method calling. The contract in this repo supports all three, but if one were to actually use this pattern you'd probably just want to pick one.
 
-### Static Calling
+### Transaction Groups
+
+#### Static Orchestrator
 
 To call `foo(uint64)void`:
 
@@ -23,7 +25,7 @@ To call `foo(uint64)void`:
    1a. Inner txn: `UpdateApplication` to the *logic app* to `foo(uint64)void` page
    2a. Inner txn: call `foo(uint64)void` on *logic app*
 
-### Dynamic Calling
+#### Dynamic Orchestrator
 
 To call `foo(uint64)void`:
 
@@ -31,7 +33,7 @@ To call `foo(uint64)void`:
    1a. Inner txn: `UpdateApplication` to the *logic app* to `foo(uint64)void` page
    2a. Inner txn: call `foo(uint64)void` on *logic app*
 
-### External Calling
+#### External Orchestrator
 
 To call `foo(uint64)void`:
 
@@ -42,19 +44,26 @@ To call `foo(uint64)void`:
 > [!TIP]
 > The two outer calls should be in the same group to avoid program race conditions
 
+#### Self Updating
+
+To call `foo(uint64)void`:
+
+1. Outer txn: `UpdateApplication` to `foo(uint64)void` page
+1. Outer txn: call `foo(uint64)void`
+
 ### Capability Summary
 
-| Capability                                      | Static Calling | Dynamic Calling | External Calling |
-| ----------------------------------------------- | -------------- | --------------- | ---------------- |
-| Total number of transactions (including inners) | 3              | 3               | 3                |
-| Number of outer transactions                    | 1              | 1               | 2                |
-| Can use generated app client                    | ✅             | ❌              | ❌               |
-| Contract internals are ABI type safe            | ✅             | ❌              | ❌               |
-| Unlimited pages of logic                        | ❌             | ✅              | ✅               |
-| Can add methods without updating orchestrator   | ❌             | ✅              | ✅               |
-| Can use ABI transaction arguments               | ❌             | ❌              | ✅               |
+| Capability                                      | Static Orchestrator | Dynamic Orchestrator | External Orchestrator | Self Updating |
+| ----------------------------------------------- | ------------------- | -------------------- | --------------------- | ------------- |
+| Total number of transactions (including inners) | 3                   | 3                    | 3                     | 2             |
+| Number of outer transactions                    | 1                   | 1                    | 2                     | 2             |
+| Can use generated app client                    | ✅                  | ❌                   | ❌                    | ❌            |
+| Contract internals are ABI type safe            | ✅                  | ❌                   | ❌                    | ✅            |
+| Unlimited pages of logic                        | ❌                  | ✅                   | ✅                    | ✅            |
+| Can add methods without updating orchestrator   | ❌                  | ✅                   | ✅                    | ✅            |
+| Can use ABI transaction arguments               | ❌                  | ❌                   | ✅                    | ✅            |
 
-### Consequences
+## Consequences
 
 #### For the End User
 
@@ -69,3 +78,7 @@ Dynamic and external calling introduce some extra complexity in terms of contrac
 ##### Contract Development
 
 Developers will need to chunk their logic up in 8kb chunks. Extra care also needs to be taken to make sure the contract is never updated in a deadlocked or vulnerable state. This is also functionality that could potentially be integrated directly into Puya/AlgoKit app clients.
+
+## Recommendations
+
+For most apps that are larger than today's program limit, the self updating pattern is likely the most useful. This is especially true if your app already requires extra transactions for references and/or op-ups. The other strong contender is the static orchestrator due to the client-side and transaction group simplicity, but this pattern falls apart when you need to have transaction arguments.
