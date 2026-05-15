@@ -1,8 +1,10 @@
 ## Problem Statement
 
-The boxed-pages project currently has an `Orchestrator` client that manages an orchestrator app + logic app pattern. However, the project also includes a self-updating contract (`VirtualSelfUpdatingApp`) where a single app stores its own pages in boxes and updates itself before calling methods. This pattern requires users to manually build transaction groups—first calling `updateApplication` to switch to the correct page, then calling the actual method. This is error-prone and verbose compared to the convenience provided by the `Orchestrator` client.
+The boxed-pages project currently has an `Orchestrator` client (in `src/orchestrator.ts`) that manages an orchestrator app + logic app pattern. However, the project also includes a self-updating contract (`VirtualSelfUpdatingApp`) where a single app stores its own pages in boxes and updates itself before calling methods. This pattern requires users to manually build transaction groups—first calling `updateApplication` to switch to the correct page, then calling the actual method. This is error-prone and verbose compared to the convenience provided by the `Orchestrator` client.
 
-Users need a high-level client (`SelfUpdatingClient`) that abstracts away the update-and-call pattern, providing a clean `send.*` interface similar to standard AlgoKit app clients.
+Users need a high-level client (`SelfUpdatingClient`, to be created alongside `src/orchestrator.ts`) that abstracts away the update-and-call pattern, providing a clean `send.*` interface similar to standard AlgoKit app clients. This is a **new client alongside the Orchestrator**, NOT a replacement—it serves a different contract pattern (self-updating vs orchestrator + logic apps).
+
+**Note:** This client should be implemented in a new file (e.g., `src/self-updating.ts`) that exists alongside `src/orchestrator.ts`. The `Orchestrator` client remains unchanged.
 
 ## Solution
 
