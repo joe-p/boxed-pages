@@ -13,6 +13,7 @@ import {
 } from "@algorandfoundation/algorand-typescript";
 import { compileArc4 } from "@algorandfoundation/algorand-typescript/arc4";
 import { ITxnCreate } from "@algorandfoundation/algorand-typescript/op";
+import { classes } from "polytype";
 
 function assertCaller() {
   assert(Global.callerApplicationAddress === Global.creatorAddress);
@@ -46,6 +47,12 @@ export class ProductPage extends PageBase {
     return this.aValue.value * this.bValue.value;
   }
 }
+
+export class VirtualLogicApp extends classes(
+  SetterPage,
+  SumPage,
+  ProductPage,
+) {}
 
 export class Orchestrator extends Contract {
   /**

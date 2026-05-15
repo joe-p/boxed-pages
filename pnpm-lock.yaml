@@ -27,6 +27,9 @@ importers:
       '@types/node':
         specifier: ^25.5.0
         version: 25.7.0
+      polytype:
+        specifier: ^0.17.0
+        version: 0.17.0
       prettier:
         specifier: ^3.8.1
         version: 3.8.3

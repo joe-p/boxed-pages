@@ -3,13 +3,15 @@ import {
   OrchestratorClient,
   OrchestratorFactory,
 } from "../contracts/clients/OrchestratorClient.ts";
-import { PageBaseClient } from "../contracts/clients/PageBaseClient.ts";
+import { VirtualLogicAppClient } from "../contracts/clients/VirtualLogicAppClient.ts";
 
 import { AlgorandClient, microAlgo } from "@algorandfoundation/algokit-utils";
 import { getABIMethod } from "@algorandfoundation/algokit-utils/abi";
+
 import SETTER_SPEC from "../contracts/out/SetterPage.arc56.json";
 import SUM_SPEC from "../contracts/out/SumPage.arc56.json";
 import PRODUCT_SPEC from "../contracts/out/ProductPage.arc56.json";
+
 import assert from "node:assert";
 
 export const PAGES = {
@@ -27,21 +29,20 @@ export type Schema = {
 };
 
 export class Orchestrator {
-  appClient: OrchestratorClient;
-  logicAppClient!: PageBaseClient;
+  orchestratorAppClient: OrchestratorClient;
+  logicAppClient!: VirtualLogicAppClient;
 
   get state() {
     return this.logicAppClient.state;
   }
 
-  get staticSend() {
-    return this.appClient.send;
-  }
-
   private constructor(algorand: AlgorandClient, appId: bigint) {
-    this.appClient = algorand.client.getTypedAppClientById(OrchestratorClient, {
-      appId,
-    });
+    this.orchestratorAppClient = algorand.client.getTypedAppClientById(
+      OrchestratorClient,
+      {
+        appId,
+      },
+    );
   }
 
   static async create(
@@ -61,27 +62,36 @@ export class Orchestrator {
     assert(logicAppId, "logic app ID should be set already");
 
     orchestrator.logicAppClient = algorand.client.getTypedAppClientById(
-      PageBaseClient,
+      VirtualLogicAppClient,
       { appId: logicAppId },
     );
 
     return orchestrator;
   }
 
-  getArgs(methodName: keyof typeof PAGES) {
-    const abiMethod = getABIMethod(methodName, this.appClient.appSpec);
-    const methodSelector = abiMethod.getSelector();
+  getSelector(methodName: keyof typeof PAGES) {
+    const abiMethod = getABIMethod(
+      methodName,
+      this.orchestratorAppClient.appSpec,
+    );
+    return abiMethod.getSelector();
+  }
 
-    return { methodSelector, pageOffset: 0, page: PAGES[methodName] };
+  getArgs(methodName: keyof typeof PAGES) {
+    return {
+      methodSelector: this.getSelector(methodName),
+      pageOffset: 0,
+      page: PAGES[methodName],
+    };
   }
 
   async initialize(sender: SendingAddress, schema?: Schema) {
-    const group = this.appClient.newGroup();
+    const group = this.orchestratorAppClient.newGroup();
 
     group.addTransaction(
-      await this.appClient.algorand.createTransaction.payment({
+      await this.orchestratorAppClient.algorand.createTransaction.payment({
         sender,
-        receiver: this.appClient.appAddress,
+        receiver: this.orchestratorAppClient.appAddress,
         amount: microAlgo(408100),
       }),
     );
@@ -105,5 +115,15 @@ export class Orchestrator {
     }
 
     await group.send();
+  }
+
+  async updateToPageTxn(
+    sender: SendingAddress,
+    methodName: keyof typeof PAGES,
+  ) {
+    return await this.orchestratorAppClient.createTransaction.updateToPage({
+      sender,
+      args: { selector: this.getSelector(methodName) },
+    });
   }
 }
