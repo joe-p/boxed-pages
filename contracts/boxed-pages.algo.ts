@@ -31,7 +31,7 @@ export class SetterPage extends PageBase {
   setValues(a: uint64, b: uint64) {
     assert(!this.aValue.hasValue && !this.bValue.hasValue);
     this.aValue.value = a;
-    this.aValue.value = b;
+    this.bValue.value = b;
   }
 }
 
