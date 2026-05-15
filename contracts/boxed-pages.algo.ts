@@ -7,7 +7,6 @@ import {
   Application,
   GlobalState,
   itxn,
-  TemplateVar,
   uint64,
   Txn,
   TransactionType,
@@ -15,9 +14,8 @@ import {
 import { compileArc4 } from "@algorandfoundation/algorand-typescript/arc4";
 import { ITxnCreate } from "@algorandfoundation/algorand-typescript/op";
 
-const ORCHESTRATOR_APP_ID = TemplateVar<uint64>("ORCHESTRATOR_APP_ID");
 function assertCaller() {
-  assert(Global.callerApplicationId === ORCHESTRATOR_APP_ID);
+  assert(Global.callerApplicationAddress === Global.creatorAddress);
 }
 
 export class PageBase extends Contract {
