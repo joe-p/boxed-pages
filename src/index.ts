@@ -34,7 +34,7 @@ export class Orchestrator {
     return this.logicAppClient.state;
   }
 
-  get send() {
+  get staticSend() {
     return this.appClient.send;
   }
 

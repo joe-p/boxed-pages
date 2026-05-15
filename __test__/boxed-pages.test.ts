@@ -3,66 +3,68 @@ import { Orchestrator, PAGES } from "../src";
 import { AlgorandClient, microAlgo } from "@algorandfoundation/algokit-utils";
 import { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
 
-describe("Orchestrator", () => {
-  let algorand: AlgorandClient;
-  let client: Orchestrator;
-  let sender: SendingAddress;
+describe("Boxed pages", () => {
+  describe("Static method calling", () => {
+    let algorand: AlgorandClient;
+    let client: Orchestrator;
+    let sender: SendingAddress;
 
-  beforeAll(async () => {
-    algorand = AlgorandClient.defaultLocalNet();
-    sender = await algorand.account.dispenserFromEnvironment();
+    beforeAll(async () => {
+      algorand = AlgorandClient.defaultLocalNet();
+      sender = await algorand.account.dispenserFromEnvironment();
 
-    client = await Orchestrator.create(algorand, sender, {
-      globalNumUint: 2,
-    });
-  });
-
-  it("setValues should be callable", async () => {
-    await client.send.setValues({
-      sender,
-      extraFee: microAlgo(2000),
-      args: { a: 2, b: 3 },
+      client = await Orchestrator.create(algorand, sender, {
+        globalNumUint: 2,
+      });
     });
 
-    const globalState = await client.state.global.getAll();
-    expect(globalState).toEqual({ aValue: 2n, bValue: 3n });
+    it("setValues should be callable", async () => {
+      await client.staticSend.setValues({
+        sender,
+        extraFee: microAlgo(2000),
+        args: { a: 2, b: 3 },
+      });
 
-    const approvalProgram = (
-      await algorand.app.getById(client.logicAppClient.appId)
-    ).approvalProgram;
+      const globalState = await client.state.global.getAll();
+      expect(globalState).toEqual({ aValue: 2n, bValue: 3n });
 
-    expect(Buffer.from(approvalProgram)).toEqual(PAGES.setValues);
-  });
+      const approvalProgram = (
+        await algorand.app.getById(client.logicAppClient.appId)
+      ).approvalProgram;
 
-  it("getSum should be callable", async () => {
-    const res = await client.send.getSum({
-      sender,
-      args: {},
-      extraFee: microAlgo(2000),
+      expect(Buffer.from(approvalProgram)).toEqual(PAGES.setValues);
     });
 
-    expect(res.return).toEqual(5n);
+    it("getSum should be callable", async () => {
+      const res = await client.staticSend.getSum({
+        sender,
+        args: {},
+        extraFee: microAlgo(2000),
+      });
 
-    const approvalProgram = (
-      await algorand.app.getById(client.logicAppClient.appId)
-    ).approvalProgram;
+      expect(res.return).toEqual(5n);
 
-    expect(Buffer.from(approvalProgram)).toEqual(PAGES.getSum);
-  });
+      const approvalProgram = (
+        await algorand.app.getById(client.logicAppClient.appId)
+      ).approvalProgram;
 
-  it("getProduct should be callable", async () => {
-    const res = await client.send.getProduct({
-      sender,
-      args: {},
-      extraFee: microAlgo(2000),
+      expect(Buffer.from(approvalProgram)).toEqual(PAGES.getSum);
     });
 
-    expect(res.return).toEqual(6n);
+    it("getProduct should be callable", async () => {
+      const res = await client.staticSend.getProduct({
+        sender,
+        args: {},
+        extraFee: microAlgo(2000),
+      });
 
-    const approvalProgram = (
-      await algorand.app.getById(client.logicAppClient.appId)
-    ).approvalProgram;
+      expect(res.return).toEqual(6n);
 
-    expect(Buffer.from(approvalProgram)).toEqual(PAGES.getProduct);
+      const approvalProgram = (
+        await algorand.app.getById(client.logicAppClient.appId)
+      ).approvalProgram;
+
+      expect(Buffer.from(approvalProgram)).toEqual(PAGES.getProduct);
+    });
   });
 });

@@ -60,20 +60,8 @@ export class Orchestrator extends Contract {
   pages = BoxMap<bytes<4>, bytes>({ keyPrefix: "" });
   logicApp = GlobalState<Application>({ key: "a" });
 
-  private _updateToPage() {
-    this._dynamicUpdateToPage(Txn.applicationArgs(0).toFixed({ length: 4 }));
-  }
-
-  private _dynamicUpdateToPage(selector: bytes<4>) {
-    const page = this.pages(selector).value;
-
-    const base = compileArc4(PageBase);
-
-    base.call.updateApplication({
-      appId: this.logicApp.value,
-      approvalProgram: page,
-      clearStateProgram: base.clearStateProgram,
-    });
+  private _updateToCurrentMethodPage() {
+    this.updateToPage(Txn.applicationArgs(0).toFixed({ length: 4 }));
   }
 
   createLogicApp(
@@ -83,6 +71,7 @@ export class Orchestrator extends Contract {
     localNumBytes: uint64,
     localNumUint: uint64,
   ) {
+    assert(Txn.sender === Global.creatorAddress);
     assert(!this.logicApp.hasValue);
     const base = compileArc4(PageBase);
 
@@ -116,54 +105,34 @@ export class Orchestrator extends Contract {
     pageBox.replace(pageOffset, page);
   }
 
-  // There are two ways to do routing. The first of which is static routing which
-  // just forwards the method selectors from the orchestrator to the logic app
-  //
-  // The second of which is dynamic which has the caller to the orchestrator specify
-  // the method selector
-  //
-  // Static Routing
-  //
-  // Pros:
-  //  * Can use the auto-generated client for the orchestrator for all app interactions
-  //  * Contract is ABI type safe
-  // Cons:
-  //  * Additional methods require updates to the orchestrator
-  //  * The orchestrator itself will eventually run into the max program size
-  //
-  // Dynamic Routing
-  //
-  // Pros:
-  //  * Can have an unlimited number of possible pages
-  //  * Orchestrator never has to update
-  // Cons:
-  //  * Not ABI safe in the contract
-  //  * Must have special client-side logic for properly calling the app
-
-  // Static Routing
+  ////////////////////////////
+  // Static Method Calling
+  ////////////////////////////
 
   setValues(a: uint64, b: uint64): void {
-    this._updateToPage();
+    this._updateToCurrentMethodPage();
     const page = compileArc4(SetterPage);
     page.call.setValues({ appId: this.logicApp.value, args: [a, b] });
   }
 
   getSum(): uint64 {
-    this._updateToPage();
+    this._updateToCurrentMethodPage();
     const page = compileArc4(SumPage);
     return page.call.getSum({ appId: this.logicApp.value }).returnValue;
   }
 
   getProduct(): uint64 {
-    this._updateToPage();
+    this._updateToCurrentMethodPage();
     const page = compileArc4(ProductPage);
     return page.call.getProduct({ appId: this.logicApp.value }).returnValue;
   }
 
-  // Dynamic Routing
+  ////////////////////////////
+  // Dynamic Method Calling
+  ////////////////////////////
 
   callMethod(methodSelector: bytes<4>, args: bytes[]) {
-    this._dynamicUpdateToPage(methodSelector);
+    this.updateToPage(methodSelector);
 
     ITxnCreate.begin();
     ITxnCreate.setTypeEnum(TransactionType.ApplicationCall);
@@ -174,5 +143,21 @@ export class Orchestrator extends Contract {
     }
 
     ITxnCreate.submit();
+  }
+
+  ////////////////////////////
+  // External Method Calling
+  ////////////////////////////
+
+  updateToPage(selector: bytes<4>) {
+    const page = this.pages(selector).value;
+
+    const base = compileArc4(PageBase);
+
+    base.call.updateApplication({
+      appId: this.logicApp.value,
+      approvalProgram: page,
+      clearStateProgram: base.clearStateProgram,
+    });
   }
 }
