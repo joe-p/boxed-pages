@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { Orchestrator, PAGES } from "../src";
+import { Orchestrator, PAGES } from "../src/orchestrator";
 import { AlgorandClient, microAlgo } from "@algorandfoundation/algokit-utils";
 import { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
 
