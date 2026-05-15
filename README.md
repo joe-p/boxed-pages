@@ -53,3 +53,19 @@ To call `foo(uint64)void`:
 | Unlimited pages of logic                        | ❌             | ✅              | ✅               |
 | Can add methods without updating orchestrator   | ❌             | ✅              | ✅               |
 | Can use ABI transaction arguments               | ❌             | ❌              | ✅               |
+
+### Consequences
+
+#### For the End User
+
+For the end user, the only significant consequence they will feel is the extra transactions (thus extra fee). If your app uses extra transactions for op ups (or references in the case of external calling) then these apps can replace the existing "extra" apps.
+
+#### For Developers
+
+##### Method Calling
+
+Dynamic and external calling introduce some extra complexity in terms of contract calling. The good news is its possible to abstract this away and its something we could potentially automatically support in AlgoKit app clients.
+
+##### Contract Development
+
+Developers will need to chunk their logic up in 8kb chunks. Extra care also needs to be taken to make sure the contract is never updated in a deadlocked or vulnerable state. This is also functionality that could potentially be integrated directly into Puya/AlgoKit app clients.
