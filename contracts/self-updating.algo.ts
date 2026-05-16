@@ -12,13 +12,9 @@ import { classes } from "polytype";
 
 export class SelfUpdatingBase extends Contract {
   /**
-   * Pages of logic that all share the same state
+   * Pages of logic that all share the same state in this app
    *
    * Maps method selectors to AVM bytecode
-   *
-   * They MUST allow the orchestrator to update them. We could add this check
-   * on-chain, but for now since we only allow the creator to define pages
-   * we can presumably trust them
    */
   pages = BoxMap<bytes<4>, bytes>({ keyPrefix: "" });
 
