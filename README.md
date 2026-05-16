@@ -8,8 +8,10 @@ Proof of concept of using boxes to store "pages" of logic. The idea is that by u
 ## Definitions
 
 **Page** - An approval program with logic that operates on shared state
-**Orchestrator-Based**: A pattern that uses two apps. The **orchestrator**, which is a single app that issues updates to the **logic app** so it can call different pages.
-**Self-Updating**: A pattern with a single app that updates itself before method calls
+
+**Orchestrator-Based**: A pattern that uses two apps. The **orchestrator**, which is a single app that stores pages of logic and issues updates to the **logic app**, which has the app state.
+
+**Self-Updating**: A pattern with a single app that updates itself before method calls. Holds both the pages in boxes and the business logic state.
 
 ## Method Calling
 
