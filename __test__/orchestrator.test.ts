@@ -37,7 +37,7 @@ const assertions = {
   },
 };
 
-describe("boxed pages", () => {
+describe("orchestrator", () => {
   describe("static method calling", () => {
     let algorand: AlgorandClient;
     let client: Orchestrator;
