@@ -96,7 +96,6 @@ export async function createSelfUpdatingClient<TPages extends PageSet>(
   if (!firstPageKey) {
     throw new Error("No pages provided");
   }
-  const firstPage = pages[firstPageKey];
 
   // Create the app using the VirtualSelfUpdatingAppFactory
   const factory = algorand.client.getTypedAppFactory(
