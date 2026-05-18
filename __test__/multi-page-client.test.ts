@@ -53,7 +53,7 @@ describe("createSelfUpdatingClient - multi-page with automatic swapping", () => 
 
     // Verify bytecode changed to Setter page
     const { approvalProgram } = await client.baseClient.algorand.app.getById(
-      client.appId
+      client.appId,
     );
     const setterBytecode = Buffer.from(SETTER_SPEC.byteCode.approval, "base64");
     expect(Buffer.from(approvalProgram)).toEqual(setterBytecode);
@@ -67,7 +67,7 @@ describe("createSelfUpdatingClient - multi-page with automatic swapping", () => 
 
     // Verify bytecode changed to Sum page
     const { approvalProgram } = await client.baseClient.algorand.app.getById(
-      client.appId
+      client.appId,
     );
     const sumBytecode = Buffer.from(SUM_SPEC.byteCode.approval, "base64");
     expect(Buffer.from(approvalProgram)).toEqual(sumBytecode);
@@ -81,9 +81,12 @@ describe("createSelfUpdatingClient - multi-page with automatic swapping", () => 
 
     // Verify bytecode changed to Product page
     const { approvalProgram } = await client.baseClient.algorand.app.getById(
-      client.appId
+      client.appId,
     );
-    const productBytecode = Buffer.from(PRODUCT_SPEC.byteCode.approval, "base64");
+    const productBytecode = Buffer.from(
+      PRODUCT_SPEC.byteCode.approval,
+      "base64",
+    );
     expect(Buffer.from(approvalProgram)).toEqual(productBytecode);
   });
 
@@ -93,7 +96,7 @@ describe("createSelfUpdatingClient - multi-page with automatic swapping", () => 
     const globalState = await client.state.global.getAll();
     expect(globalState.aValue).toBeDefined();
     expect(globalState.bValue).toBeDefined();
-    
+
     // Switch to Sum page and verify values persisted from earlier
     const sumResult = await client.send.getSum({ sender, args: [] });
     // Values from earlier test should persist (2+3=5 or whatever was set)
@@ -107,12 +110,12 @@ describe("createSelfUpdatingClient - multi-page with automatic swapping", () => 
   it("should access state via exposed state property after page swap", async () => {
     // Call a method to swap pages
     await client.send.getSum({ sender, args: [] });
-    
+
     // Verify state is still accessible via exposed state property
     const globalState = await client.state.global.getAll();
     expect(globalState.aValue).toBeDefined();
     expect(globalState.bValue).toBeDefined();
-    
+
     // Verify individual state values
     const aValue = await client.state.global.aValue();
     const bValue = await client.state.global.bValue();
@@ -125,7 +128,7 @@ describe("createSelfUpdatingClient - multi-page with automatic swapping", () => 
     // Just verify getSum returns the correct sum based on current state
     const globalState = await client.baseClient.state.global.getAll();
     const expectedSum = globalState.aValue + globalState.bValue;
-    
+
     // Call getSum and verify it returns the correct sum
     const result = await client.send.getSum({ sender, args: [] });
     expect(result.return).toEqual(expectedSum);

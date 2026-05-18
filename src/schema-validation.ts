@@ -1,5 +1,5 @@
 import type { Arc56Contract } from "@algorandfoundation/algokit-utils/abi";
-import type { AppClient, AppClientParams } from "@algorandfoundation/algokit-utils/app-client";
+import type { AppClient } from "@algorandfoundation/algokit-utils/app-client";
 
 /**
  * Configuration for a single page in a self-updating app.
@@ -10,9 +10,9 @@ export interface PageConfig {
   spec: Arc56Contract;
   /**
    * The generated AlgoKit client class for this page.
-   * Must have a constructor that takes AppClientParams.
+   * Generated clients typically take AppClient or AppClientParams in their constructor.
    */
-  Client: new (params: AppClientParams) => AppClient;
+  Client: new (...args: any[]) => AppClient;
 }
 
 /**
@@ -40,24 +40,32 @@ interface SchemaInfo {
 function extractSchemaInfo(spec: Arc56Contract): SchemaInfo {
   const state = spec.state;
   if (!state) {
-    throw new Error(`Missing 'state' in ARC56 spec for contract "${spec.name}"`);
+    throw new Error(
+      `Missing 'state' in ARC56 spec for contract "${spec.name}"`,
+    );
   }
 
   const schema = state.schema;
   if (!schema) {
-    throw new Error(`Missing 'state.schema' in ARC56 spec for contract "${spec.name}"`);
+    throw new Error(
+      `Missing 'state.schema' in ARC56 spec for contract "${spec.name}"`,
+    );
   }
 
   // Extract global schema
   const globalSchema = schema.global;
   if (!globalSchema) {
-    throw new Error(`Missing 'state.schema.global' in ARC56 spec for contract "${spec.name}"`);
+    throw new Error(
+      `Missing 'state.schema.global' in ARC56 spec for contract "${spec.name}"`,
+    );
   }
 
   // Extract local schema
   const localSchema = schema.local;
   if (!localSchema) {
-    throw new Error(`Missing 'state.schema.local' in ARC56 spec for contract "${spec.name}"`);
+    throw new Error(
+      `Missing 'state.schema.local' in ARC56 spec for contract "${spec.name}"`,
+    );
   }
 
   // Extract global keys
@@ -129,7 +137,7 @@ export function validatePages(pages: PageConfig[]): void {
       throw new Error(
         `Global schema mismatch between "${reference.name}" and "${current.name}": ` +
           `expected {ints: ${reference.info.globalInts}, bytes: ${reference.info.globalBytes}}, ` +
-          `got {ints: ${current.info.globalInts}, bytes: ${current.info.globalBytes}}`
+          `got {ints: ${current.info.globalInts}, bytes: ${current.info.globalBytes}}`,
       );
     }
 
@@ -141,7 +149,7 @@ export function validatePages(pages: PageConfig[]): void {
       throw new Error(
         `Local schema mismatch between "${reference.name}" and "${current.name}": ` +
           `expected {ints: ${reference.info.localInts}, bytes: ${reference.info.localBytes}}, ` +
-          `got {ints: ${current.info.localInts}, bytes: ${current.info.localBytes}}`
+          `got {ints: ${current.info.localInts}, bytes: ${current.info.localBytes}}`,
       );
     }
 
@@ -158,7 +166,7 @@ export function validatePages(pages: PageConfig[]): void {
       const currentValue = currentKeys[key];
       if (!currentValue) {
         throw new Error(
-          `Global state key mismatch: "${key}" exists in "${reference.name}" but not in "${current.name}"`
+          `Global state key mismatch: "${key}" exists in "${reference.name}" but not in "${current.name}"`,
         );
       }
       if (
@@ -168,7 +176,7 @@ export function validatePages(pages: PageConfig[]): void {
         throw new Error(
           `Global state key "${key}" type mismatch between "${reference.name}" and "${current.name}": ` +
             `expected {keyType: "${value.keyType}", valueType: "${value.valueType}"}, ` +
-            `got {keyType: "${currentValue.keyType}", valueType: "${currentValue.valueType}"}`
+            `got {keyType: "${currentValue.keyType}", valueType: "${currentValue.valueType}"}`,
         );
       }
     }
@@ -177,7 +185,7 @@ export function validatePages(pages: PageConfig[]): void {
     for (const key of Object.keys(currentKeys)) {
       if (!referenceKeys[key]) {
         throw new Error(
-          `Global state key mismatch: "${key}" exists in "${current.name}" but not in "${reference.name}"`
+          `Global state key mismatch: "${key}" exists in "${current.name}" but not in "${reference.name}"`,
         );
       }
     }

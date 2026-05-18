@@ -1,20 +1,29 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { SelfUpdatingClient, PAGES } from "../src/self-updating";
+import { createSelfUpdatingClient, PAGES } from "../src/self-updating";
 import { AlgorandClient } from "@algorandfoundation/algokit-utils";
 import { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
 import baseSpec from "../contracts/out/SelfUpdatingBase.arc56.json";
+import { SetterSelfUpdatingPageClient } from "../contracts/clients/SetterSelfUpdatingPageClient.js";
+import { SumSelfUpdatingPageClient } from "../contracts/clients/SumSelfUpdatingPageClient.js";
+import { ProductSelfUpdatingPageClient } from "../contracts/clients/ProductSelfUpdatingPageClient.js";
+import SETTER_SPEC from "../contracts/out/SetterSelfUpdatingPage.arc56.json";
+import SUM_SPEC from "../contracts/out/SumSelfUpdatingPage.arc56.json";
+import PRODUCT_SPEC from "../contracts/out/ProductSelfUpdatingPage.arc56.json";
+import { getABIMethod } from "@algorandfoundation/algokit-utils/abi";
 
 describe("self-updating client", () => {
   let algorand: AlgorandClient;
-  let client: SelfUpdatingClient;
+  let client: Awaited<ReturnType<typeof createSelfUpdatingClient>>;
   let sender: SendingAddress;
 
   beforeAll(async () => {
     algorand = AlgorandClient.defaultLocalNet();
     sender = await algorand.account.dispenserFromEnvironment();
 
-    client = await SelfUpdatingClient.create(algorand, sender, {
-      globalNumUint: 2,
+    client = await createSelfUpdatingClient(algorand, sender, {
+      setValues: { spec: SETTER_SPEC, Client: SetterSelfUpdatingPageClient },
+      getSum: { spec: SUM_SPEC, Client: SumSelfUpdatingPageClient },
+      getProduct: { spec: PRODUCT_SPEC, Client: ProductSelfUpdatingPageClient },
     });
   });
 
@@ -25,12 +34,12 @@ describe("self-updating client", () => {
 
   it("should deploy app and register pages", async () => {
     // Verify the app was created
-    expect(client.appClient.appId).toBeGreaterThan(0n);
+    expect(client.appId).toBeGreaterThan(0n);
 
     // Verify each page is stored using value() method
-    const setValuesSelector = client.getSelector("setValues");
-    const getSumSelector = client.getSelector("getSum");
-    const getProductSelector = client.getSelector("getProduct");
+    const setValuesSelector = getABIMethod("setValues", client.baseClient.appSpec).getSelector();
+    const getSumSelector = getABIMethod("getSum", client.baseClient.appSpec).getSelector();
+    const getProductSelector = getABIMethod("getProduct", client.baseClient.appSpec).getSelector();
 
     const setValuesPage = await client.state.box.pages.value(setValuesSelector);
     const getSumPage = await client.state.box.pages.value(getSumSelector);
@@ -47,10 +56,10 @@ describe("self-updating client", () => {
     expect(Buffer.from(getProductPage!)).toEqual(PAGES.getProduct);
   });
 
-  it("should expose underlying appClient as escape hatch", () => {
-    expect(client.appClient).toBeDefined();
-    expect(client.appClient.appId).toBeGreaterThan(0n);
-    expect(client.appClient.appAddress).toBeDefined();
+  it("should expose underlying baseClient as escape hatch", () => {
+    expect(client.baseClient).toBeDefined();
+    expect(client.baseClient.appId).toBeGreaterThan(0n);
+    expect(client.baseClient.appAddress).toBeDefined();
   });
 
   it("send.setValues should set initial values and update to setValues page", async () => {
@@ -62,8 +71,8 @@ describe("self-updating client", () => {
     const globalState = await client.state.global.getAll();
     expect(globalState).toEqual({ aValue: 2n, bValue: 3n });
 
-    const { approvalProgram } = await client.appClient.algorand.app.getById(
-      client.appClient.appId,
+    const { approvalProgram } = await client.baseClient.algorand.app.getById(
+      client.appId,
     );
 
     expect(Buffer.from(approvalProgram)).toEqual(PAGES.setValues);
@@ -75,8 +84,8 @@ describe("self-updating client", () => {
 
     expect(result.return).toEqual(5n);
 
-    const { approvalProgram } = await client.appClient.algorand.app.getById(
-      client.appClient.appId,
+    const { approvalProgram } = await client.baseClient.algorand.app.getById(
+      client.appId,
     );
 
     expect(Buffer.from(approvalProgram)).toEqual(PAGES.getSum);
@@ -88,8 +97,8 @@ describe("self-updating client", () => {
 
     expect(result.return).toEqual(6n);
 
-    const { approvalProgram } = await client.appClient.algorand.app.getById(
-      client.appClient.appId,
+    const { approvalProgram } = await client.baseClient.algorand.app.getById(
+      client.appId,
     );
 
     expect(Buffer.from(approvalProgram)).toEqual(PAGES.getProduct);

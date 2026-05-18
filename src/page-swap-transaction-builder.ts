@@ -2,7 +2,7 @@ import type { AlgorandClient } from "@algorandfoundation/algokit-utils/algorand-
 import type { Transaction } from "@algorandfoundation/algokit-utils/transact";
 import type { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
 import type { Arc56Contract } from "@algorandfoundation/algokit-utils/abi";
-import type { AppClient, AppClientParams } from "@algorandfoundation/algokit-utils/app-client";
+import type { AppClient } from "@algorandfoundation/algokit-utils/app-client";
 import type { PageConfig } from "./schema-validation.js";
 import { getABIMethod } from "@algorandfoundation/algokit-utils/abi";
 
@@ -140,7 +140,8 @@ function generateRandomNote(): Uint8Array {
 export async function buildSwapTransaction(
   params: BuildSwapTransactionParams,
 ): Promise<Transaction> {
-  const { algorand, targetPage, appId, sender, baseClient, methodName } = params;
+  const { algorand, targetPage, appId, sender, baseClient, methodName } =
+    params;
 
   // Instantiate the target page client with the current appId
   const pageClient = new targetPage.Client({
@@ -156,13 +157,15 @@ export async function buildSwapTransaction(
 
   // Create the update transaction via the page client with a unique note
   // The note ensures each transaction has a unique ID even if params are identical
-  const transactionResult = await (pageClient.createTransaction.update as unknown as {
-    updateApplication: (params: {
-      sender: SendingAddress;
-      args: { selector: Uint8Array };
-      note: Uint8Array;
-    }) => Promise<{ transactions: Transaction[] }>;
-  }).updateApplication({
+  const transactionResult = await (
+    pageClient.createTransaction.update as unknown as {
+      updateApplication: (params: {
+        sender: SendingAddress;
+        args: { selector: Uint8Array };
+        note: Uint8Array;
+      }) => Promise<{ transactions: Transaction[] }>;
+    }
+  ).updateApplication({
     sender,
     args: { selector },
     note: generateRandomNote(),

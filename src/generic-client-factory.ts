@@ -1,14 +1,7 @@
 import type { AlgorandClient } from "@algorandfoundation/algokit-utils/algorand-client";
 import type { Address } from "@algorandfoundation/algokit-utils";
 import type { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
-import type {
-  AppClientParams,
-  AppClient,
-} from "@algorandfoundation/algokit-utils/app-client";
-import type {
-  SendParams,
-  SendTransactionComposerResults,
-} from "@algorandfoundation/algokit-utils/transaction";
+import type { SendTransactionComposerResults } from "@algorandfoundation/algokit-utils/transaction";
 import type { PageConfig, PageSet } from "./schema-validation.js";
 import { validatePages } from "./schema-validation.js";
 import {
@@ -31,60 +24,12 @@ function getPrimaryMethodName(spec: PageConfig["spec"]): string | undefined {
 }
 
 /**
- * Extracts arguments and return type from a page's ARC56 spec for a given method.
- * Returns the full method signature and return type information.
- */
-function extractMethodInfo(spec: PageConfig["spec"], methodName: string) {
-  const method = spec.methods?.find((m) => m.name === methodName);
-  if (!method) return undefined;
-
-  const args = method.args.map((arg) => `${arg.type}`).join(",");
-  const signature = `${method.name}(${args})${method.returns.type}`;
-
-  return {
-    signature,
-    args,
-    returns: method.returns.type,
-    method,
-  };
-}
-
-/**
- * Type that extracts method signatures from a page client class.
- * Maps method names to their call parameters and return types.
- */
-type ExtractPageMethods<TClient> = TClient extends AppClient
-  ? TClient["send"] extends infer TSend
-    ? {
-        [K in keyof TSend]: TSend[K] extends (...args: infer P) => infer R
-          ? (...args: P) => R
-          : never;
-      }
-    : never
-  : never;
-
-/**
- * Type for send method parameters - combines the underlying client's params with SendParams.
- */
-type SendMethodParams<TClient extends AppClient> = TClient extends { send: infer TSend }
-  ? TSend extends Record<string, (...args: any[]) => any>
-    ? Parameters<TSend[keyof TSend]>[0] & SendParams
-    : never
-  : never;
-
-/**
- * Type for send method return value.
- */
-type SendMethodReturn<TClient extends AppClient> =
-  SendTransactionComposerResults & { return: unknown };
-
-/**
  * Build the SendMethods type for a PageSet.
  * Maps each page key to its client's send methods with proper typing.
  */
 type SendMethods<TPages extends PageSet> = {
   [K in keyof TPages]: TPages[K] extends PageConfig
-    ? TPages[K]["Client"] extends new (params: AppClientParams) => infer TClient
+    ? TPages[K]["Client"] extends new (...args: any[]) => infer TClient
       ? TClient extends { send: infer TSend }
         ? TSend extends Record<string, (...args: any[]) => any>
           ? (
