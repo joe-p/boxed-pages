@@ -1,8 +1,15 @@
 import type { AlgorandClient } from "@algorandfoundation/algokit-utils/algorand-client";
 import type { Address } from "@algorandfoundation/algokit-utils";
 import type { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
-import type { AppClientParams, AppClient, CallParams } from "@algorandfoundation/algokit-utils/app-client";
-import type { SendParams, SendTransactionComposerResults } from "@algorandfoundation/algokit-utils/transaction";
+import type {
+  AppClientParams,
+  AppClient,
+  CallParams,
+} from "@algorandfoundation/algokit-utils/app-client";
+import type {
+  SendParams,
+  SendTransactionComposerResults,
+} from "@algorandfoundation/algokit-utils/transaction";
 import { PageConfig, PageSet, validatePages } from "./schema-validation";
 import {
   VirtualSelfUpdatingAppFactory,
@@ -19,7 +26,7 @@ import { buildSwapTransaction } from "./page-swap-transaction-builder";
 function getPrimaryMethodName(spec: PageConfig["spec"]): string | undefined {
   if (!spec.methods) return undefined;
   return spec.methods.find(
-    (m) => m.name !== "updateApplication" && m.name !== "setPage"
+    (m) => m.name !== "updateApplication" && m.name !== "setPage",
   )?.name;
 }
 
@@ -48,19 +55,27 @@ function extractMethodInfo(spec: PageConfig["spec"], methodName: string) {
  */
 type ExtractPageMethods<TClient> = TClient extends AppClient
   ? TClient["send"] extends infer TSend
-    ? { [K in keyof TSend]: TSend[K] extends (...args: infer P) => infer R ? (...args: P) => R : never }
+    ? {
+        [K in keyof TSend]: TSend[K] extends (...args: infer P) => infer R
+          ? (...args: P) => R
+          : never;
+      }
     : never
   : never;
 
 /**
  * Type for send method parameters - combines the underlying client's params with SendParams.
  */
-type SendMethodParams<TClient extends AppClient> = Parameters<TClient["send"][keyof TClient["send"]]>[0] & SendParams;
+type SendMethodParams<TClient extends AppClient> = Parameters<
+  TClient["send"][keyof TClient["send"]]
+>[0] &
+  SendParams;
 
 /**
  * Type for send method return value.
  */
-type SendMethodReturn<TClient extends AppClient> = SendTransactionComposerResults & { return: unknown };
+type SendMethodReturn<TClient extends AppClient> =
+  SendTransactionComposerResults & { return: unknown };
 
 /**
  * Build the SendMethods type for a PageSet.
@@ -70,8 +85,12 @@ type SendMethods<TPages extends PageSet> = {
   [K in keyof TPages]: TPages[K] extends PageConfig
     ? TPages[K]["Client"] extends new (params: AppClientParams) => infer TClient
       ? TClient extends AppClient
-        ? <TParams extends Parameters<TClient["send"][keyof TClient["send"]]>[0]>(
-            params: TParams
+        ? <
+            TParams extends Parameters<
+              TClient["send"][keyof TClient["send"]]
+            >[0],
+          >(
+            params: TParams,
           ) => Promise<SendTransactionComposerResults & { return: unknown }>
         : never
       : never
@@ -79,24 +98,40 @@ type SendMethods<TPages extends PageSet> = {
 };
 
 /**
- * Result type returned by createSelfUpdatingClient.
- * Contains typed send methods and app information.
+ * State interface for the self-updating client.
+ * Exposes global and box state from the base page.
  */
-export interface SelfUpdatingClientResult<TPages extends PageSet> {
+type SelfUpdatingClientState<TBasePage extends VirtualSelfUpdatingAppClient> = {
+  /** Global state getters from the base page */
+  global: TBasePage["state"]["global"];
+  /** Box state getters from the base page */
+  box: TBasePage["state"]["box"];
+};
+
+/**
+ * Result type returned by createSelfUpdatingClient.
+ * Contains typed send methods, state access, and app information.
+ */
+export interface SelfUpdatingClientResult<
+  TPages extends PageSet,
+  TBasePage extends VirtualSelfUpdatingAppClient,
+> {
   /** Typed send methods that automatically handle page swapping */
   send: SendMethods<TPages>;
   /** The ID of the deployed app */
   appId: bigint;
   /** The address of the deployed app */
   appAddress: Address;
+  /** Access to shared state (global and box) */
+  state: SelfUpdatingClientState<TBasePage>;
   /** Access to the underlying base app client for state queries */
-  baseClient: VirtualSelfUpdatingAppClient;
+  baseClient: TBasePage;
 }
 
 /**
  * Creates a self-updating client from a page configuration.
  * For a single page, this simply creates the app and registers the page.
- * 
+ *
  * @param algorand - The Algorand client instance
  * @param sender - The sender address for transactions
  * @param pages - The page configuration mapping method names to page specs and clients
@@ -106,7 +141,7 @@ export interface SelfUpdatingClientResult<TPages extends PageSet> {
 export async function createSelfUpdatingClient<TPages extends PageSet>(
   algorand: AlgorandClient,
   sender: SendingAddress,
-  pages: TPages
+  pages: TPages,
 ): Promise<SelfUpdatingClientResult<TPages>> {
   // Validate pages (even single page needs validation)
   const pageConfigs = Object.values(pages);
@@ -119,10 +154,13 @@ export async function createSelfUpdatingClient<TPages extends PageSet>(
   // Create the app using the VirtualSelfUpdatingAppFactory
   const factory = algorand.client.getTypedAppFactory(
     VirtualSelfUpdatingAppFactory,
-    {}
+    {},
   );
 
-  const { appClient: baseClient } = await factory.send.create.bare({ sender });
+  const { appClient: baseClient } = await factory.send.create.bare({
+    sender,
+    note: `${Date.now()}-${Math.random()}`,
+  });
 
   // Initialize the app by registering pages
   await initializeApp(algorand, sender, baseClient, pages);
@@ -134,6 +172,10 @@ export async function createSelfUpdatingClient<TPages extends PageSet>(
     send: send as SendMethods<TPages>,
     appId: baseClient.appId,
     appAddress: baseClient.appAddress,
+    state: {
+      global: baseClient.state.global,
+      box: baseClient.state.box,
+    },
     baseClient,
   };
 }
@@ -145,7 +187,7 @@ async function initializeApp<TPages extends PageSet>(
   algorand: AlgorandClient,
   sender: SendingAddress,
   baseClient: VirtualSelfUpdatingAppClient,
-  pages: TPages
+  pages: TPages,
 ): Promise<void> {
   const group = baseClient.newGroup();
 
@@ -155,21 +197,15 @@ async function initializeApp<TPages extends PageSet>(
       sender,
       receiver: baseClient.appAddress,
       amount: microAlgo(408100),
-    })
+    }),
   );
 
   // Register each page
   for (const [methodName, pageConfig] of Object.entries(pages)) {
-    const bytecode = Buffer.from(
-      pageConfig.spec.byteCode.approval,
-      "base64"
-    );
+    const bytecode = Buffer.from(pageConfig.spec.byteCode.approval, "base64");
 
     // Get the selector using getABIMethod
-    const abiMethod = getABIMethod(
-      methodName,
-      baseClient.appSpec
-    );
+    const abiMethod = getABIMethod(methodName, baseClient.appSpec);
     const selector = abiMethod.getSelector();
 
     group.setPage({
@@ -194,7 +230,7 @@ function buildSendMethods<TPages extends PageSet>(
   algorand: AlgorandClient,
   sender: SendingAddress,
   baseClient: VirtualSelfUpdatingAppClient,
-  pages: TPages
+  pages: TPages,
 ): Record<string, (params: unknown) => Promise<unknown>> {
   const sendMethods: Record<string, (params: unknown) => Promise<unknown>> = {};
 
@@ -204,14 +240,17 @@ function buildSendMethods<TPages extends PageSet>(
 
     if (!primaryMethodName) {
       throw new Error(
-        `No primary method found in page "${methodName}". Expected at least one method other than updateApplication or setPage.`
+        `No primary method found in page "${methodName}". Expected at least one method other than updateApplication or setPage.`,
       );
     }
 
     // Create the send method that swaps then executes
     sendMethods[methodName] = async (params: unknown) => {
       const typedParams = params as { sender: SendingAddress; args: unknown };
-      const group = baseClient.newGroup() as Record<string, (p: unknown) => unknown>;
+      const group = baseClient.newGroup() as Record<
+        string,
+        (p: unknown) => unknown
+      >;
 
       // Build and add swap transaction to target page
       const swapTx = await buildSwapTransaction({
@@ -219,7 +258,8 @@ function buildSendMethods<TPages extends PageSet>(
         targetPage: pageConfig,
         appId: baseClient.appId,
         sender: typedParams.sender,
-        baseClient: baseClient as unknown as import("@algorandfoundation/algokit-utils/app-client").AppClient,
+        baseClient:
+          baseClient as unknown as import("@algorandfoundation/algokit-utils/app-client").AppClient,
         methodName: methodName,
       });
       group.addTransaction(swapTx);
@@ -227,7 +267,9 @@ function buildSendMethods<TPages extends PageSet>(
       // Add the actual method call
       group[primaryMethodName](params);
 
-      const result = await (group as { send: () => Promise<SendTransactionComposerResults> }).send();
+      const result = await (
+        group as { send: () => Promise<SendTransactionComposerResults> }
+      ).send();
       return { ...result, return: result.returns[0] };
     };
   }

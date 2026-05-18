@@ -69,6 +69,27 @@ describe("createSelfUpdatingClient - single page", () => {
     expect(client.baseClient.state.box).toBeDefined();
   });
 
+  it("should expose state property directly on returned client", async () => {
+    expect(client.state).toBeDefined();
+    expect(client.state.global).toBeDefined();
+    expect(client.state.box).toBeDefined();
+  });
+
+  it("should read global state via client.state.global.getAll()", async () => {
+    // Values were set in previous test
+    const globalState = await client.state.global.getAll();
+    expect(globalState).toBeDefined();
+    expect(globalState).toHaveProperty("aValue");
+    expect(globalState).toHaveProperty("bValue");
+  });
+
+  it("should read individual global state values via client.state.global", async () => {
+    const aValue = await client.state.global.aValue();
+    const bValue = await client.state.global.bValue();
+    expect(typeof aValue).toBe("bigint");
+    expect(typeof bValue).toBe("bigint");
+  });
+
   it("should register the page in box storage", async () => {
     // Get the selector for setValues method
     const abiMethod = getABIMethod("setValues", client.baseClient.appSpec);
@@ -76,6 +97,20 @@ describe("createSelfUpdatingClient - single page", () => {
 
     // Check that the page was registered
     const page = await client.baseClient.state.box.pages.value(selector);
+    expect(page).toBeDefined();
+
+    // Verify the page content matches the Setter page bytecode
+    const expectedBytecode = Buffer.from(SETTER_SPEC.byteCode.approval, "base64");
+    expect(Buffer.from(page!)).toEqual(expectedBytecode);
+  });
+
+  it("should read box state via client.state.box.pages.value()", async () => {
+    // Get the selector for setValues method
+    const abiMethod = getABIMethod("setValues", client.baseClient.appSpec);
+    const selector = abiMethod.getSelector();
+
+    // Read page from box storage using exposed state property
+    const page = await client.state.box.pages.value(selector);
     expect(page).toBeDefined();
 
     // Verify the page content matches the Setter page bytecode

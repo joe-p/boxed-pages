@@ -50,7 +50,10 @@ export class SelfUpdatingClient {
       {},
     );
 
-    const { appClient } = await factory.send.create.bare({ sender });
+    const { appClient } = await factory.send.create.bare({
+      sender,
+      note: `${Date.now()}-${Math.random()}`,
+    });
 
     const client = new SelfUpdatingClient(appClient);
     await client.initialize(sender, schema);
@@ -59,10 +62,7 @@ export class SelfUpdatingClient {
   }
 
   getSelector(methodName: keyof typeof PAGES) {
-    const abiMethod = getABIMethod(
-      methodName,
-      this.appClient.appSpec,
-    );
+    const abiMethod = getABIMethod(methodName, this.appClient.appSpec);
     return abiMethod.getSelector();
   }
 
@@ -125,9 +125,7 @@ export class SelfUpdatingClient {
 
   send = {
     setValues: async (
-      params: Parameters<
-        VirtualSelfUpdatingAppClient["send"]["setValues"]
-      >[0],
+      params: Parameters<VirtualSelfUpdatingAppClient["send"]["setValues"]>[0],
     ) => {
       const group = this.appClient.newGroup();
 
@@ -144,14 +142,15 @@ export class SelfUpdatingClient {
     },
 
     getSum: async (
-      params: Parameters<
-        VirtualSelfUpdatingAppClient["send"]["getSum"]
-      >[0] = { args: [] },
+      params: Parameters<VirtualSelfUpdatingAppClient["send"]["getSum"]>[0] = {
+        args: [],
+      },
     ) => {
       const group = this.appClient.newGroup();
 
       group.addTransaction(
-        (await this.getUpdateTransaction(params.sender!, "getSum")).transactions[0],
+        (await this.getUpdateTransaction(params.sender!, "getSum"))
+          .transactions[0],
       );
 
       group.getSum(params);

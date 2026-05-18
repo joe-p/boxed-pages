@@ -89,8 +89,8 @@ describe("createSelfUpdatingClient - multi-page with automatic swapping", () => 
 
   it("should persist state across page swaps", async () => {
     // Values were already set in earlier tests (a=2, b=3)
-    // First verify the current state
-    const globalState = await client.baseClient.state.global.getAll();
+    // First verify the current state using exposed state property
+    const globalState = await client.state.global.getAll();
     expect(globalState.aValue).toBeDefined();
     expect(globalState.bValue).toBeDefined();
     
@@ -102,6 +102,22 @@ describe("createSelfUpdatingClient - multi-page with automatic swapping", () => 
     // Switch to Product page and verify values persist
     const productResult = await client.send.getProduct({ sender, args: [] });
     expect(typeof productResult.return).toBe("bigint");
+  });
+
+  it("should access state via exposed state property after page swap", async () => {
+    // Call a method to swap pages
+    await client.send.getSum({ sender, args: [] });
+    
+    // Verify state is still accessible via exposed state property
+    const globalState = await client.state.global.getAll();
+    expect(globalState.aValue).toBeDefined();
+    expect(globalState.bValue).toBeDefined();
+    
+    // Verify individual state values
+    const aValue = await client.state.global.aValue();
+    const bValue = await client.state.global.bValue();
+    expect(typeof aValue).toBe("bigint");
+    expect(typeof bValue).toBe("bigint");
   });
 
   it("should return correct sum proving state persisted", async () => {
