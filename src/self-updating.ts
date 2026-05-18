@@ -1,19 +1,19 @@
-import { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
-import { ReadableAddress } from "@algorandfoundation/algokit-utils";
+import type { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
+import type { ReadableAddress } from "@algorandfoundation/algokit-utils";
 import {
   VirtualSelfUpdatingAppClient,
   VirtualSelfUpdatingAppFactory,
-} from "../contracts/clients/VirtualSelfUpdatingAppClient.ts";
-import { SetterSelfUpdatingPageClient } from "../contracts/clients/SetterSelfUpdatingPageClient.ts";
-import { SumSelfUpdatingPageClient } from "../contracts/clients/SumSelfUpdatingPageClient.ts";
-import { ProductSelfUpdatingPageClient } from "../contracts/clients/ProductSelfUpdatingPageClient.ts";
+} from "../contracts/clients/VirtualSelfUpdatingAppClient.js";
+import { SetterSelfUpdatingPageClient } from "../contracts/clients/SetterSelfUpdatingPageClient.js";
+import { SumSelfUpdatingPageClient } from "../contracts/clients/SumSelfUpdatingPageClient.js";
+import { ProductSelfUpdatingPageClient } from "../contracts/clients/ProductSelfUpdatingPageClient.js";
 
 import { AlgorandClient, microAlgo } from "@algorandfoundation/algokit-utils";
 import { getABIMethod } from "@algorandfoundation/algokit-utils/abi";
 
-import SETTER_SPEC from "../contracts/out/SetterSelfUpdatingPage.arc56.json";
-import SUM_SPEC from "../contracts/out/SumSelfUpdatingPage.arc56.json";
-import PRODUCT_SPEC from "../contracts/out/ProductSelfUpdatingPage.arc56.json";
+import SETTER_SPEC from "../contracts/out/SetterSelfUpdatingPage.arc56.json" with { type: "json" };
+import SUM_SPEC from "../contracts/out/SumSelfUpdatingPage.arc56.json" with { type: "json" };
+import PRODUCT_SPEC from "../contracts/out/ProductSelfUpdatingPage.arc56.json" with { type: "json" };
 
 export const PAGES = {
   setValues: Buffer.from(SETTER_SPEC.byteCode.approval, "base64"),
@@ -130,15 +130,18 @@ export class SelfUpdatingClient {
       const group = this.appClient.newGroup();
 
       // Add update transaction using the page-specific client to get correct bytecode
-      group.addTransaction(
-        (await this.getUpdateTransaction(params.sender!, "setValues"))
-          .transactions[0],
-      );
+      const txResult = await this.getUpdateTransaction(params.sender!, "setValues");
+      const tx = txResult.transactions[0];
+      if (!tx) {
+        throw new Error("No transaction returned from getUpdateTransaction");
+      }
+      group.addTransaction(tx);
 
       group.setValues(params);
 
       const result = await group.send();
-      return { ...result, return: result.returns[0] as void };
+      const returnValue = result.returns?.[0];
+      return { ...result, return: returnValue as void };
     },
 
     getSum: async (
@@ -148,15 +151,18 @@ export class SelfUpdatingClient {
     ) => {
       const group = this.appClient.newGroup();
 
-      group.addTransaction(
-        (await this.getUpdateTransaction(params.sender!, "getSum"))
-          .transactions[0],
-      );
+      const txResult = await this.getUpdateTransaction(params.sender!, "getSum");
+      const tx = txResult.transactions[0];
+      if (!tx) {
+        throw new Error("No transaction returned from getUpdateTransaction");
+      }
+      group.addTransaction(tx);
 
       group.getSum(params);
 
       const result = await group.send();
-      return { ...result, return: result.returns[0] as bigint };
+      const returnValue = result.returns?.[0];
+      return { ...result, return: (returnValue ?? 0n) as bigint };
     },
 
     getProduct: async (
@@ -166,15 +172,18 @@ export class SelfUpdatingClient {
     ) => {
       const group = this.appClient.newGroup();
 
-      group.addTransaction(
-        (await this.getUpdateTransaction(params.sender!, "getProduct"))
-          .transactions[0],
-      );
+      const txResult = await this.getUpdateTransaction(params.sender!, "getProduct");
+      const tx = txResult.transactions[0];
+      if (!tx) {
+        throw new Error("No transaction returned from getUpdateTransaction");
+      }
+      group.addTransaction(tx);
 
       group.getProduct(params);
 
       const result = await group.send();
-      return { ...result, return: result.returns[0] as bigint };
+      const returnValue = result.returns?.[0];
+      return { ...result, return: (returnValue ?? 0n) as bigint };
     },
   };
 }

@@ -5,11 +5,16 @@ import {
   BuildSwapTransactionParams,
 } from "../src/page-swap-transaction-builder";
 import { PageConfig } from "../src/schema-validation";
-import { AppClient, AppClientParams } from "@algorandfoundation/algokit-utils/app-client";
+import {
+  AppClient,
+  AppClientParams,
+} from "@algorandfoundation/algokit-utils/app-client";
 import { Arc56Contract } from "@algorandfoundation/algokit-utils/abi";
 import { AlgorandClient } from "@algorandfoundation/algokit-utils/algorand-client";
-import { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
-import { Transaction } from "algosdk";
+import {
+  SendingAddress,
+  Transaction,
+} from "@algorandfoundation/algokit-utils/transact";
 
 // Import actual ARC56 specs from the contracts
 import SETTER_SPEC from "../contracts/out/SetterSelfUpdatingPage.arc56.json";
@@ -28,10 +33,7 @@ describe("getMethodSelector", () => {
   });
 
   it("should extract selector for getSum method", () => {
-    const selector = getMethodSelector(
-      SUM_SPEC as Arc56Contract,
-      "getSum",
-    );
+    const selector = getMethodSelector(SUM_SPEC as Arc56Contract, "getSum");
 
     expect(selector).toBeInstanceOf(Uint8Array);
     expect(selector.length).toBe(4);
@@ -417,5 +419,4 @@ describe("buildSwapTransaction", () => {
 
     expect(result).toBeDefined();
   });
-
 });

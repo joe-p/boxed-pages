@@ -4,20 +4,20 @@ import type { SendingAddress } from "@algorandfoundation/algokit-utils/transact"
 import type {
   AppClientParams,
   AppClient,
-  CallParams,
 } from "@algorandfoundation/algokit-utils/app-client";
 import type {
   SendParams,
   SendTransactionComposerResults,
 } from "@algorandfoundation/algokit-utils/transaction";
-import { PageConfig, PageSet, validatePages } from "./schema-validation";
+import type { PageConfig, PageSet } from "./schema-validation.js";
+import { validatePages } from "./schema-validation.js";
 import {
   VirtualSelfUpdatingAppFactory,
   VirtualSelfUpdatingAppClient,
-} from "../contracts/clients/VirtualSelfUpdatingAppClient.ts";
+} from "../contracts/clients/VirtualSelfUpdatingAppClient.js";
 import { microAlgo } from "@algorandfoundation/algokit-utils";
 import { getABIMethod } from "@algorandfoundation/algokit-utils/abi";
-import { buildSwapTransaction } from "./page-swap-transaction-builder";
+import { buildSwapTransaction } from "./page-swap-transaction-builder.js";
 
 /**
  * Extracts the primary method name from a page's ARC56 spec.
@@ -66,10 +66,11 @@ type ExtractPageMethods<TClient> = TClient extends AppClient
 /**
  * Type for send method parameters - combines the underlying client's params with SendParams.
  */
-type SendMethodParams<TClient extends AppClient> = Parameters<
-  TClient["send"][keyof TClient["send"]]
->[0] &
-  SendParams;
+type SendMethodParams<TClient extends AppClient> = TClient extends { send: infer TSend }
+  ? TSend extends Record<string, (...args: any[]) => any>
+    ? Parameters<TSend[keyof TSend]>[0] & SendParams
+    : never
+  : never;
 
 /**
  * Type for send method return value.
@@ -84,14 +85,12 @@ type SendMethodReturn<TClient extends AppClient> =
 type SendMethods<TPages extends PageSet> = {
   [K in keyof TPages]: TPages[K] extends PageConfig
     ? TPages[K]["Client"] extends new (params: AppClientParams) => infer TClient
-      ? TClient extends AppClient
-        ? <
-            TParams extends Parameters<
-              TClient["send"][keyof TClient["send"]]
-            >[0],
-          >(
-            params: TParams,
-          ) => Promise<SendTransactionComposerResults & { return: unknown }>
+      ? TClient extends { send: infer TSend }
+        ? TSend extends Record<string, (...args: any[]) => any>
+          ? (
+              params: Parameters<TSend[keyof TSend]>[0],
+            ) => Promise<SendTransactionComposerResults & { return: unknown }>
+          : never
         : never
       : never
     : never;
@@ -142,13 +141,16 @@ export async function createSelfUpdatingClient<TPages extends PageSet>(
   algorand: AlgorandClient,
   sender: SendingAddress,
   pages: TPages,
-): Promise<SelfUpdatingClientResult<TPages>> {
+): Promise<SelfUpdatingClientResult<TPages, VirtualSelfUpdatingAppClient>> {
   // Validate pages (even single page needs validation)
   const pageConfigs = Object.values(pages);
   validatePages(pageConfigs);
 
   // Get the first page as the base
   const firstPageKey = Object.keys(pages)[0];
+  if (!firstPageKey) {
+    throw new Error("No pages provided");
+  }
   const firstPage = pages[firstPageKey];
 
   // Create the app using the VirtualSelfUpdatingAppFactory
@@ -202,6 +204,9 @@ async function initializeApp<TPages extends PageSet>(
 
   // Register each page
   for (const [methodName, pageConfig] of Object.entries(pages)) {
+    if (!pageConfig.spec.byteCode?.approval) {
+      throw new Error(`Missing bytecode for page "${methodName}"`);
+    }
     const bytecode = Buffer.from(pageConfig.spec.byteCode.approval, "base64");
 
     // Get the selector using getABIMethod
@@ -247,10 +252,10 @@ function buildSendMethods<TPages extends PageSet>(
     // Create the send method that swaps then executes
     sendMethods[methodName] = async (params: unknown) => {
       const typedParams = params as { sender: SendingAddress; args: unknown };
-      const group = baseClient.newGroup() as Record<
-        string,
-        (p: unknown) => unknown
-      >;
+      const group = baseClient.newGroup() as unknown as {
+        addTransaction: (tx: unknown) => void;
+        send: () => Promise<SendTransactionComposerResults>;
+      } & Record<string, (p: unknown) => unknown>;
 
       // Build and add swap transaction to target page
       const swapTx = await buildSwapTransaction({
@@ -265,12 +270,14 @@ function buildSendMethods<TPages extends PageSet>(
       group.addTransaction(swapTx);
 
       // Add the actual method call
-      group[primaryMethodName](params);
+      const method = group[primaryMethodName];
+      if (typeof method === "function") {
+        method(params);
+      }
 
-      const result = await (
-        group as { send: () => Promise<SendTransactionComposerResults> }
-      ).send();
-      return { ...result, return: result.returns[0] };
+      const result = await group.send();
+      const returnValue = result.returns?.[0];
+      return { ...result, return: returnValue };
     };
   }
 

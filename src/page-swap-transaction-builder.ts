@@ -3,7 +3,7 @@ import type { Transaction } from "@algorandfoundation/algokit-utils/transact";
 import type { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
 import type { Arc56Contract } from "@algorandfoundation/algokit-utils/abi";
 import type { AppClient, AppClientParams } from "@algorandfoundation/algokit-utils/app-client";
-import { PageConfig } from "./schema-validation";
+import type { PageConfig } from "./schema-validation.js";
 import { getABIMethod } from "@algorandfoundation/algokit-utils/abi";
 
 /**
@@ -146,6 +146,7 @@ export async function buildSwapTransaction(
   const pageClient = new targetPage.Client({
     algorand,
     appId,
+    appSpec: targetPage.spec,
   });
 
   // Get the method selector from the base app's spec using the method name
@@ -155,7 +156,13 @@ export async function buildSwapTransaction(
 
   // Create the update transaction via the page client with a unique note
   // The note ensures each transaction has a unique ID even if params are identical
-  const transactionResult = await pageClient.createTransaction.update.updateApplication({
+  const transactionResult = await (pageClient.createTransaction.update as unknown as {
+    updateApplication: (params: {
+      sender: SendingAddress;
+      args: { selector: Uint8Array };
+      note: Uint8Array;
+    }) => Promise<{ transactions: Transaction[] }>;
+  }).updateApplication({
     sender,
     args: { selector },
     note: generateRandomNote(),
@@ -163,11 +170,15 @@ export async function buildSwapTransaction(
 
   // Return the first transaction from the result
   // The result contains an array of transactions (usually just one for update)
-  if (!transactionResult.transactions || transactionResult.transactions.length === 0) {
+  const transactions = transactionResult.transactions;
+  if (!transactions || transactions.length === 0) {
     throw new Error("No transaction returned from updateApplication call");
   }
-
-  return transactionResult.transactions[0];
+  const firstTx = transactions[0];
+  if (!firstTx) {
+    throw new Error("First transaction is undefined");
+  }
+  return firstTx;
 }
 
 /**

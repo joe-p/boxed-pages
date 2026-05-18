@@ -1,16 +1,16 @@
-import { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
+import type { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
 import {
   OrchestratorClient,
   OrchestratorFactory,
-} from "../contracts/clients/OrchestratorClient.ts";
-import { VirtualLogicAppClient } from "../contracts/clients/VirtualLogicAppClient.ts";
+} from "../contracts/clients/OrchestratorClient.js";
+import { VirtualLogicAppClient } from "../contracts/clients/VirtualLogicAppClient.js";
 
 import { AlgorandClient, microAlgo } from "@algorandfoundation/algokit-utils";
 import { getABIMethod } from "@algorandfoundation/algokit-utils/abi";
 
-import SETTER_SPEC from "../contracts/out/SetterPage.arc56.json";
-import SUM_SPEC from "../contracts/out/SumPage.arc56.json";
-import PRODUCT_SPEC from "../contracts/out/ProductPage.arc56.json";
+import SETTER_SPEC from "../contracts/out/SetterPage.arc56.json" with { type: "json" };
+import SUM_SPEC from "../contracts/out/SumPage.arc56.json" with { type: "json" };
+import PRODUCT_SPEC from "../contracts/out/ProductPage.arc56.json" with { type: "json" };
 
 import assert from "node:assert";
 

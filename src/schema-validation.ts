@@ -66,10 +66,12 @@ function extractSchemaInfo(spec: Arc56Contract): SchemaInfo {
   if (keys?.global) {
     for (const key of Object.keys(keys.global)) {
       const value = keys.global[key];
-      globalKeys[key] = {
-        keyType: value.keyType,
-        valueType: value.valueType,
-      };
+      if (value) {
+        globalKeys[key] = {
+          keyType: value.keyType,
+          valueType: value.valueType,
+        };
+      }
     }
   }
 
@@ -108,10 +110,16 @@ export function validatePages(pages: PageConfig[]): void {
 
   // Use first page as reference
   const reference = schemas[0];
+  if (!reference) {
+    throw new Error("Reference schema is undefined");
+  }
 
   // Validate each page against the reference
   for (let i = 1; i < schemas.length; i++) {
     const current = schemas[i];
+    if (!current) {
+      throw new Error(`Schema at index ${i} is undefined`);
+    }
 
     // Check global schema
     if (
@@ -144,6 +152,9 @@ export function validatePages(pages: PageConfig[]): void {
     // Check that current page has all keys from reference
     for (const key of Object.keys(referenceKeys)) {
       const value = referenceKeys[key];
+      if (!value) {
+        continue;
+      }
       const currentValue = currentKeys[key];
       if (!currentValue) {
         throw new Error(
