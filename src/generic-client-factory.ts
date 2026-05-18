@@ -112,7 +112,7 @@ export async function createSelfUpdatingClient<TPages extends PageSet>(
   await initializeApp(algorand, sender, baseClient, pages);
 
   // Build the typed send object
-  const send = buildSendMethods(algorand, sender, baseClient, pages);
+  const send = buildSendMethods(algorand, baseClient, pages);
 
   return {
     send: send as SendMethods<TPages>,
@@ -177,7 +177,6 @@ async function initializeApp<TPages extends PageSet>(
  */
 function buildSendMethods<TPages extends PageSet>(
   algorand: AlgorandClient,
-  sender: SendingAddress,
   baseClient: VirtualSelfUpdatingAppClient,
   pages: TPages,
 ): Record<string, (params: unknown) => Promise<unknown>> {
