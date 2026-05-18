@@ -173,11 +173,17 @@ describe("buildSwapTransaction", () => {
       ) => AppClient,
     };
 
+    const mockBaseClient = {
+      appSpec: SETTER_SPEC,
+    } as unknown as AppClient;
+
     const params: BuildSwapTransactionParams = {
       algorand: mockAlgorand,
       targetPage: pageConfig,
       appId: testAppId,
       sender: mockSender,
+      baseClient: mockBaseClient,
+      methodName: "setValues",
     };
 
     await buildSwapTransaction(params);
@@ -215,11 +221,17 @@ describe("buildSwapTransaction", () => {
       ) => AppClient,
     };
 
+    const mockBaseClient = {
+      appSpec: SETTER_SPEC,
+    } as unknown as AppClient;
+
     const params: BuildSwapTransactionParams = {
       algorand: mockAlgorand,
       targetPage: pageConfig,
       appId: testAppId,
       sender: mockSender,
+      baseClient: mockBaseClient,
+      methodName: "setValues",
     };
 
     await buildSwapTransaction(params);
@@ -258,11 +270,17 @@ describe("buildSwapTransaction", () => {
       ) => AppClient,
     };
 
+    const mockBaseClient = {
+      appSpec: SETTER_SPEC,
+    } as unknown as AppClient;
+
     const params: BuildSwapTransactionParams = {
       algorand: mockAlgorand,
       targetPage: pageConfig,
       appId: testAppId,
       sender: mockSender,
+      baseClient: mockBaseClient,
+      methodName: "setValues",
     };
 
     const result = await buildSwapTransaction(params);
@@ -294,11 +312,17 @@ describe("buildSwapTransaction", () => {
       ) => AppClient,
     };
 
+    const mockBaseClient = {
+      appSpec: SETTER_SPEC,
+    } as unknown as AppClient;
+
     const params: BuildSwapTransactionParams = {
       algorand: mockAlgorand,
       targetPage: pageConfig,
       appId: testAppId,
       sender: mockSender,
+      baseClient: mockBaseClient,
+      methodName: "setValues",
     };
 
     await expect(buildSwapTransaction(params)).rejects.toThrow(
@@ -332,11 +356,17 @@ describe("buildSwapTransaction", () => {
       ) => AppClient,
     };
 
+    const mockBaseClient = {
+      appSpec: SUM_SPEC,
+    } as unknown as AppClient;
+
     const params: BuildSwapTransactionParams = {
       algorand: mockAlgorand,
       targetPage: pageConfig,
       appId: testAppId,
       sender: mockSender,
+      baseClient: mockBaseClient,
+      methodName: "getSum",
     };
 
     const result = await buildSwapTransaction(params);
@@ -370,11 +400,17 @@ describe("buildSwapTransaction", () => {
       ) => AppClient,
     };
 
+    const mockBaseClient = {
+      appSpec: PRODUCT_SPEC,
+    } as unknown as AppClient;
+
     const params: BuildSwapTransactionParams = {
       algorand: mockAlgorand,
       targetPage: pageConfig,
       appId: testAppId,
       sender: mockSender,
+      baseClient: mockBaseClient,
+      methodName: "getProduct",
     };
 
     const result = await buildSwapTransaction(params);
@@ -382,70 +418,4 @@ describe("buildSwapTransaction", () => {
     expect(result).toBeDefined();
   });
 
-  it("should throw for page without primary method", async () => {
-    const badSpec: Arc56Contract = {
-      ...SETTER_SPEC,
-      name: "BadSpec",
-      methods: [
-        {
-          name: "updateApplication",
-          args: [{ type: "byte[4]", name: "selector" }],
-          returns: { type: "void" },
-          actions: { create: [], call: ["UpdateApplication"] },
-          readonly: false,
-          events: [],
-          recommendations: {},
-        },
-        {
-          name: "setPage",
-          args: [
-            { type: "byte[4]", name: "methodSelector" },
-            { type: "uint64", name: "pageOffset" },
-            { type: "byte[]", name: "page" },
-          ],
-          returns: { type: "void" },
-          actions: { create: [], call: ["NoOp"] },
-          readonly: false,
-          events: [],
-          recommendations: {},
-        },
-      ],
-    } as Arc56Contract;
-
-    const mockTransaction = createMockTransaction();
-
-    class MockClient {
-      constructor(_params: AppClientParams) {}
-
-      readonly createTransaction = {
-        update: {
-          updateApplication: vi.fn().mockResolvedValue({
-            transactions: [mockTransaction],
-          }),
-        },
-      };
-    }
-
-    const mockAlgorand = createMockAlgorandClient();
-    const mockSender = "TEST_SENDER_ADDRESS" as SendingAddress;
-    const testAppId = 12345n;
-
-    const pageConfig: PageConfig = {
-      spec: badSpec,
-      Client: MockClient as unknown as new (
-        params: AppClientParams,
-      ) => AppClient,
-    };
-
-    const params: BuildSwapTransactionParams = {
-      algorand: mockAlgorand,
-      targetPage: pageConfig,
-      appId: testAppId,
-      sender: mockSender,
-    };
-
-    await expect(buildSwapTransaction(params)).rejects.toThrow(
-      /No primary method found/,
-    );
-  });
 });

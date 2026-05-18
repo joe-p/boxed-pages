@@ -10,6 +10,7 @@ import {
 } from "../contracts/clients/VirtualSelfUpdatingAppClient.ts";
 import { microAlgo } from "@algorandfoundation/algokit-utils";
 import { getABIMethod } from "@algorandfoundation/algokit-utils/abi";
+import { buildSwapTransaction } from "./page-swap-transaction-builder";
 
 /**
  * Extracts the primary method name from a page's ARC56 spec.
@@ -187,11 +188,11 @@ async function initializeApp<TPages extends PageSet>(
 
 /**
  * Builds the send methods for each page.
- * For a single page, no swapping is needed - we just call the method directly.
+ * Each method automatically swaps to its page before executing.
  */
 function buildSendMethods<TPages extends PageSet>(
-  _algorand: AlgorandClient,
-  _sender: SendingAddress,
+  algorand: AlgorandClient,
+  sender: SendingAddress,
   baseClient: VirtualSelfUpdatingAppClient,
   pages: TPages
 ): Record<string, (params: unknown) => Promise<unknown>> {
@@ -200,19 +201,30 @@ function buildSendMethods<TPages extends PageSet>(
   for (const [methodName, pageConfig] of Object.entries(pages)) {
     // Get the primary method name from the page spec
     const primaryMethodName = getPrimaryMethodName(pageConfig.spec);
-    
+
     if (!primaryMethodName) {
       throw new Error(
         `No primary method found in page "${methodName}". Expected at least one method other than updateApplication or setPage.`
       );
     }
 
-    // Create the send method
+    // Create the send method that swaps then executes
     sendMethods[methodName] = async (params: unknown) => {
+      const typedParams = params as { sender: SendingAddress; args: unknown };
       const group = baseClient.newGroup() as Record<string, (p: unknown) => unknown>;
 
-      // For single page (no swapping needed), just call the method directly
-      // The baseClient has all the methods from the VirtualSelfUpdatingApp
+      // Build and add swap transaction to target page
+      const swapTx = await buildSwapTransaction({
+        algorand,
+        targetPage: pageConfig,
+        appId: baseClient.appId,
+        sender: typedParams.sender,
+        baseClient: baseClient as unknown as import("@algorandfoundation/algokit-utils/app-client").AppClient,
+        methodName: methodName,
+      });
+      group.addTransaction(swapTx);
+
+      // Add the actual method call
       group[primaryMethodName](params);
 
       const result = await (group as { send: () => Promise<SendTransactionComposerResults> }).send();

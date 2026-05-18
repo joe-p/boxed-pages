@@ -39,15 +39,35 @@ const result = await client.send.getSum({ sender, args: [] });
 
 ## Acceptance criteria
 
-- [ ] Factory supports multiple pages in configuration
-- [ ] Each `send` method composes swap + method call transactions
-- [ ] Integration test: call `setValues`, verify bytecode changes to Setter page
-- [ ] Integration test: call `getSum`, verify bytecode changes to Sum page
-- [ ] Integration test: call `getProduct`, verify bytecode changes to Product page
-- [ ] Integration test: state set by `setValues` persists when calling `getSum`
-- [ ] Integration test: `getSum` returns correct sum (proves state persisted)
-- [ ] TypeScript error if two pages have same method name (collision detection)
-- [ ] Each method returns exactly what the page client's send returns
+- [x] Factory supports multiple pages in configuration
+- [x] Each `send` method composes swap + method call transactions
+- [x] Integration test: call `setValues`, verify bytecode changes to Setter page
+- [x] Integration test: call `getSum`, verify bytecode changes to Sum page
+- [x] Integration test: call `getProduct`, verify bytecode changes to Product page
+- [x] Integration test: state set by `setValues` persists when calling `getSum`
+- [x] Integration test: `getSum` returns correct sum (proves state persisted)
+- [x] TypeScript error if two pages have same method name (collision detection)
+- [x] Each method returns exactly what the page client's send returns
+
+## Implementation Summary
+
+Updated `src/generic-client-factory.ts` to support automatic page swapping:
+
+1. **Modified `buildSendMethods`**: Each send method now:
+   - Builds swap transaction using `buildSwapTransaction` 
+   - Adds swap transaction to composer
+   - Adds actual method call to composer
+   - Sends both as atomic group
+   - Returns the method call result
+
+2. **Added unique notes**: Added `generateRandomNote()` to `buildSwapTransaction` to ensure unique transaction IDs when running tests
+
+3. **Created integration tests**: `__test__/multi-page-client.test.ts` with 9 tests:
+   - Multi-page client creation
+   - Page bytecode swapping verification for each page type
+   - State persistence across page swaps
+   - Return value verification
+   - Transaction count verification
 
 ## Blocked by
 
