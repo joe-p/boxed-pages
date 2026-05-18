@@ -1,19 +1,19 @@
-import { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
-import { ReadableAddress } from "@algorandfoundation/algokit-utils";
+import type { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
+import type { ReadableAddress } from "@algorandfoundation/algokit-utils";
 import {
   VirtualSelfUpdatingAppClient,
   VirtualSelfUpdatingAppFactory,
-} from "../contracts/clients/VirtualSelfUpdatingAppClient.ts";
-import { SetterSelfUpdatingPageClient } from "../contracts/clients/SetterSelfUpdatingPageClient.ts";
-import { SumSelfUpdatingPageClient } from "../contracts/clients/SumSelfUpdatingPageClient.ts";
-import { ProductSelfUpdatingPageClient } from "../contracts/clients/ProductSelfUpdatingPageClient.ts";
+} from "../contracts/clients/VirtualSelfUpdatingAppClient.js";
+import { SetterSelfUpdatingPageClient } from "../contracts/clients/SetterSelfUpdatingPageClient.js";
+import { SumSelfUpdatingPageClient } from "../contracts/clients/SumSelfUpdatingPageClient.js";
+import { ProductSelfUpdatingPageClient } from "../contracts/clients/ProductSelfUpdatingPageClient.js";
 
 import { AlgorandClient, microAlgo } from "@algorandfoundation/algokit-utils";
 import { getABIMethod } from "@algorandfoundation/algokit-utils/abi";
 
-import SETTER_SPEC from "../contracts/out/SetterSelfUpdatingPage.arc56.json";
-import SUM_SPEC from "../contracts/out/SumSelfUpdatingPage.arc56.json";
-import PRODUCT_SPEC from "../contracts/out/ProductSelfUpdatingPage.arc56.json";
+import SETTER_SPEC from "../contracts/out/SetterSelfUpdatingPage.arc56.json" with { type: "json" };
+import SUM_SPEC from "../contracts/out/SumSelfUpdatingPage.arc56.json" with { type: "json" };
+import PRODUCT_SPEC from "../contracts/out/ProductSelfUpdatingPage.arc56.json" with { type: "json" };
 
 export const PAGES = {
   setValues: Buffer.from(SETTER_SPEC.byteCode.approval, "base64"),
@@ -132,10 +132,11 @@ export class SelfUpdatingClient {
       const group = this.appClient.newGroup();
 
       // Add update transaction using the page-specific client to get correct bytecode
-      group.addTransaction(
-        (await this.getUpdateTransaction(params.sender!, "setValues"))
-          .transactions[0],
-      );
+      const updateTx = await this.getUpdateTransaction(params.sender!, "setValues");
+      if (!updateTx.transactions[0]) {
+        throw new Error("Failed to get update transaction");
+      }
+      group.addTransaction(updateTx.transactions[0]);
 
       group.setValues(params);
 
@@ -150,14 +151,17 @@ export class SelfUpdatingClient {
     ) => {
       const group = this.appClient.newGroup();
 
-      group.addTransaction(
-        (await this.getUpdateTransaction(params.sender!, "getSum")).transactions[0],
-      );
+      const updateTx = await this.getUpdateTransaction(params.sender!, "getSum");
+      if (!updateTx.transactions[0]) {
+        throw new Error("Failed to get update transaction");
+      }
+      group.addTransaction(updateTx.transactions[0]);
 
       group.getSum(params);
 
       const result = await group.send();
-      return { ...result, return: result.returns[0] as bigint };
+      const returnValue = result.returns[0];
+      return { ...result, return: returnValue === undefined ? 0n : (returnValue as bigint) };
     },
 
     getProduct: async (
@@ -167,15 +171,17 @@ export class SelfUpdatingClient {
     ) => {
       const group = this.appClient.newGroup();
 
-      group.addTransaction(
-        (await this.getUpdateTransaction(params.sender!, "getProduct"))
-          .transactions[0],
-      );
+      const updateTx = await this.getUpdateTransaction(params.sender!, "getProduct");
+      if (!updateTx.transactions[0]) {
+        throw new Error("Failed to get update transaction");
+      }
+      group.addTransaction(updateTx.transactions[0]);
 
       group.getProduct(params);
 
       const result = await group.send();
-      return { ...result, return: result.returns[0] as bigint };
+      const returnValue = result.returns[0];
+      return { ...result, return: returnValue === undefined ? 0n : (returnValue as bigint) };
     },
   };
 }

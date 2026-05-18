@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { SelfUpdatingClient, PAGES } from "../src/self-updating";
+import { SelfUpdatingClient, PAGES } from "../src/self-updating.js";
 import { AlgorandClient } from "@algorandfoundation/algokit-utils";
-import { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
-import baseSpec from "../contracts/out/SelfUpdatingBase.arc56.json";
+import type { SendingAddress } from "@algorandfoundation/algokit-utils/transact";
+import baseSpec from "../contracts/out/SelfUpdatingBase.arc56.json" with { type: "json" };
 
 describe("self-updating client", () => {
   let algorand: AlgorandClient;
